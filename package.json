@@ -1,0 +1,22 @@
+{
+  "name": "a-mazed",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "run": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "maze",
+    "game",
+    "websocket"
+  ],
+  "author": "",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@y0urstruly/maze": "^1.0.1",
+    "canvas": "^2.11.2",
+    "ws": "^8.13.0"
+  }
+}

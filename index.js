@@ -105,7 +105,8 @@ function newPos(x,y,colour,{l,f,s},isPlyr){
 
 const server=http.createServer(function(req,res){
     //return res.end("<pre>Game Updating<br>Please hold on...</pre>"); //used for when updating
-    res.end(html.join(createToken()))
+    res.setHeader('Content-Type','text/html');
+    res.end(html.join(createToken()));
 }).listen(8080,_=>console.log('hosting...'))
 const ws = new WebSocket.Server({server,maxPayload:2**11})
 ws.on('connection',client=>{

@@ -82,6 +82,7 @@ let colour=null, nameChanges=0, savedToken="\\";
         clearInterval(ping);
         try{console.error({code:_.code,reason:_.reason})}
         catch{return location.reload()}
+        if(typeof _.reason!=="string") return arguments.callee();
         if(_.reason.startsWith("token")) return location.reload();
         arguments.callee(); //reconnect
     }
