@@ -1,0 +1,7 @@
+sign: "-"    meaning: "set name"
+sign: "|"    meaning: "chat message"
+sign: "#"    meaning: "leaderboard display"
+sign: "="    meaning: "image src of new maze"
+sign: "_"    meaning: "position update of every player"
+
+otherwise(string starting with "N","E","S", or "W") it's a player move request
