@@ -1,0 +1,218 @@
+<html>
+<head>
+    <title>Multiplayer Maze</title>
+    <meta property="og:title" content="Multiplayer Maze">
+    <!-- <meta property="og:image" content="https://i.stack.imgur.com/EK4vR.png"> -->
+    <meta property="og:image" content="https://i.stack.imgur.com/P6Ljn.png">
+    <meta property="og:description" content="Use WASD or arrow keys to solve the maze from the red starting point to the blue finish line. Do so faster than anyone else in this Multiplayer Maze Game">
+    <style>
+        pre{margin:0;}
+        li{font-size:20px;}
+        h1{text-align:center;}
+        body{padding:0; margin:1;}
+        u{font-size:16px; font-family:cursive;}
+        .hide{display:none; z-index:-3;}
+        .left{text-align:left; float:left; width:30%;}
+        .right{text-align:right; float:right; width:30%;}
+        .message{padding:5px; height:auto; overflow-wrap:break-word; margin:1%;}
+        #challenge{position:absolute; z-index:-2;}
+        #board{position:absolute; background-color:rgba(0,0,0,0.5); color:cyan; height:642; width:642;}
+        #chatbox{width:30%; float:right; height:90%; border: 2px solid; border-radius:2%;}
+        #chatboxhead{width: 99.5%; height: 7%; border: 1px solid; border-radius:3%;}
+        #chatboxmain{width:100%; height:83%; border:1px solid; overflow-y:auto; word-wrap:break-word;}
+        #chatboxfoot{height:9%; width:99.5%; border:1px solid; border-radius:3%;}
+        #chat{border:4px double; border-radius:3%; margin:0.5% 10%; width:80%; height:90%; padding:4%;}
+    </style>
+</head>
+<body>
+    <img id="challenge"/>
+    <div id="board" class="hide"></div>
+    <div id="chatbox">
+        <div id="chatboxhead">
+            <h1 id="namespace" style="margin:0" contenteditable="true">Unnamed Noob</h1>
+        </div>
+        <div id="chatboxmain"></div>
+        <div id="chatboxfoot">
+            <input id="chat" placeholder="send messages..."/>
+        </div>
+    </div>
+<script>
+let str_map={__proto__:null};
+for(let i=0;i<256;i++) str_map[String.fromCharCode(i)]=i;
+let img=document.getElementById('challenge')
+let canvas=document.createElement('canvas')
+let board=document.getElementById('board')
+let chatbox=document.getElementById('chatbox')
+let chatboxHead=document.getElementById('chatboxhead')
+let chatboxMain=document.getElementById('chatboxmain')
+let chatboxFoot=document.getElementById('chatboxfoot')
+let chatInput=document.getElementById('chat')
+let namespace=document.getElementById('namespace')
+canvas.height=642
+canvas.width=642
+document.body.appendChild(canvas)
+let ctx=canvas.getContext('2d')
+function oppositeColour(hex){
+    //return "#"+((parseInt("ffffff",16)-parseInt(hex.substr(1),16)).toString(16));
+    
+    //let r=parseInt(hex.substring(1,3),16), g=parseInt(hex.substring(3,5),16), b=parseInt(hex.substring(5,7),16)
+    //let result=(256-r).toString(16)+(256-g).toString(16)+(256-b).toString(16)
+    
+    let o=(parseInt("ffffff",16)-parseInt(hex.substr(1),16))
+    let result=o.toString(16)
+    while(result.length<6) result="0"+result;
+    return "#"+result;
+}
+if(localStorage.name) namespace.innerText=localStorage.name;
+let colour=null, nameChanges=0, savedToken="\\";
+
+
+//connection engine below
+(function(){
+    if(arguments.callee.caller) console.warn("reconnection");
+    else console.log("first connection");
+    (colour=null, nameChanges=0, namespace.contentEditable=true); //resets due to new connection
+    let socket = new WebSocket("wss://"+location.host)
+    let lastPing=Number(new Date()), t=null
+    let reconnect=_=>{
+        socket.removeEventListener('close',reconnect)
+        socket.removeEventListener('error',reconnect)
+        socket.close();
+        clearTimeout(t);
+        clearInterval(ping);
+        try{console.error({code:_.code,reason:_.reason})}
+        catch{return location.reload()}
+        if(_.reason.startsWith("token")) return location.reload();
+        arguments.callee(); //reconnect
+    }
+    let ping=setInterval(_=>{
+        if(new Date()-lastPing>7e3) reconnect();
+    },1e3)
+    socket.addEventListener('close',reconnect);
+    socket.addEventListener('error',reconnect);
+    socket.addEventListener('open',_=>{
+        socket.send(savedToken)
+        if(localStorage.name) setTimeout(setName,3e2);
+    })
+    socket.addEventListener('message',m=>{
+        let msg=m.data
+        if(msg==="PING"){
+            lastPing=Number(new Date())
+            return t=setTimeout(_=>socket.send("PING"),2500)
+        }
+        if(msg[0]==='|') return parseChat(msg);
+        if(msg[0]==='#'){
+            board.classList.remove('hide');
+            return board.innerHTML=msg.substr(1);
+        }
+        if(msg[0]==='='){
+            board.classList.add('hide');
+            return img.src=msg.substr(1)
+            console.log(img.src);
+        }
+        try{parseMove(msg)}
+        catch(err){return console.warn(err)}
+    })
+    window.socket=socket;
+})()
+//connection engine above
+
+
+function validName(str){
+    if(str.length>16) return false;
+    let space=false;
+    for(let i=0;i<str.length;i++){
+        if(str[i]===' '){
+            if(space) return false; //not 2 spacebars in a row
+            space=true;
+            continue;
+        }
+        else space=false; //reset when new character isn't spacebar
+        let n=str_map[str[i]];
+        if(!((n>=48&&n<=57) || (n>=65&&n<=90) || (n>=97&&n<=122))) return false;
+    }
+    return str.length>0 && str[0]!==' ' && str.at(-1)!==' ';
+}
+function setName(){
+    let name=namespace.innerText
+    localStorage.name=name;
+    if(!validName(name)) return namespace.innerText="Invalid Name";
+    if(namespace.contentEditable=='true') socket.send('-'+name);
+    if(++nameChanges>=2) namespace.contentEditable=false;
+}
+namespace.addEventListener("focusout",setName);
+function parseChat(msg){
+    let {message,sender,hex}=JSON.parse(msg.substr(1));
+    let messageBox=document.createElement('div')
+    let name=document.createElement('b')
+    let underline=document.createElement('u')
+    let content=document.createElement('b')
+    //declarations finished now for setting up
+    messageBox.classList.add("message")
+    messageBox.style=`color:${oppositeColour("#"+hex)}; background-color:${hex}`;
+    underline.innerText=sender;
+    content.innerText=": "+message;
+    name.appendChild(underline);
+    messageBox.append(name,content);
+    chatboxMain.appendChild(messageBox);
+    messageBox.scrollIntoView({behavior:"smooth", block:"end", inline:"nearest"})
+}
+function parseMove(msg){
+    try{ctx.reset()}
+    catch{ctx.clearRect(0,0,642,642)}
+    for(let i=1; i<msg.length; i++){
+        let isPlyr=false, SS=null;
+        let X=short(msg.substring(i,i+=2))
+        let Y=short(msg.substring(i,i+=2))
+        let S=short(msg.substring(i,i+=2))
+        let hex='#'+msg.substring(i,i+=6)
+        if(msg[i]!=='\n'){
+            isPlyr=true;
+            SS=short(msg.substring(i,i+=2))
+        }
+        ctx.beginPath()
+        ctx.arc(X,Y,S,0,Math.PI*2,true)
+        ctx.stroke()
+        ctx.fillStyle=hex
+        ctx.fill()
+        if(isPlyr){
+            if(colour===null){
+                chatboxHead.style=`color:${oppositeColour(hex)}; background-color:${hex}`;
+                colour=hex;
+            }
+            ctx.beginPath()
+            ctx.arc(X,Y,SS,0,Math.PI*2,true)
+            ctx.stroke()
+            ctx.beginPath()
+            ctx.arc(X,Y,3,0,Math.PI*2,true)
+            ctx.fillStyle=oppositeColour(hex)
+            ctx.fill()
+        }
+    }
+}
+function short(str){
+    return (str_map[str[0]]*256) + str_map[str[1]];
+}
+
+let inputs={
+    w: 'N', ArrowUp: 'N',
+    d: 'E', ArrowRight: 'E',
+    s: 'S', ArrowDown: 'S',
+    a: 'W', ArrowLeft: 'W'
+}
+document.addEventListener('keydown',e=>{
+    if(e.target!==document.body){
+        if(e.key==="Enter"){
+            if(e.target===namespace) namespace.blur();
+            else if(e.target===chatInput && !e.shiftKey){
+                socket.send('|'+chatInput.value)
+                chatInput.value="";
+            }
+        }
+        return 0;
+    }
+    if(inputs[e.key]) socket.send(inputs[e.key]);
+})
+</script>
+</body>
+</html>
