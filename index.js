@@ -4,7 +4,7 @@ const WebSocket=require('ws'), slash=process.platform=="win32"?"\\":"/";
 const random=_=> crypto.webcrypto.getRandomValues(new Uint32Array(1))[0];
 const range=(min,max)=>(random()%((max+1)-min))+min;
 
-let ab_map=[], str_map={__proto__:null}, NULL=Symbol(null);
+let ab_map=[], str_map={__proto__:null}, NULL=Symbol(null)
 for(let i=0;i<256;i++){
   ab_map[i]=String.fromCharCode(i);
   str_map[ab_map[i]]=i;
@@ -50,7 +50,7 @@ function createToken(){
     players[token]={socket:null,pos:null,name:null,hex,timeout,interval:null,__proto__:null};
     return token;
 }
-let newMazeLoading=false, newMazeStartDate=Date.now(), newMazeWinners=null, winnerDisplay="";
+let newMazeLoading=false, newMazeStartDate=Date.now(), newMazeWinners=null, winnerDisplay="", livePlayerCount=0;
 async function newMaze(){ //maze updated
     newMazeLoading=true;
     newMazeWinners||=[];
@@ -106,7 +106,7 @@ function newPos(x,y,colour,{l,f,s},isPlyr){
 const server=http.createServer(function(req,res){
     //return res.end("<pre>Game Updating<br>Please hold on...</pre>"); //used for when updating
     res.setHeader('Content-Type','text/html');
-    res.end(html.join(createToken()));
+    res.end(html.join(createToken()))
 }).listen(8080,_=>console.log('hosting...'))
 const ws = new WebSocket.Server({server,maxPayload:2**11})
 ws.on('connection',client=>{
@@ -114,8 +114,10 @@ ws.on('connection',client=>{
     let afk=setTimeout(_=>client.close(1000),2e3);
     let ping=setInterval(_=>{
         if(new Date()-lastPing>7e3){
-            if(token!==NULL)
+            if(token!==NULL){
+                livePlayerCount--; //a player has left the game
                 players[token].timeout=setTimeout(_=>delete players[token],2e4);
+            }
             client.close(1000);
             clearInterval(ping);
         }
@@ -130,6 +132,7 @@ ws.on('connection',client=>{
                 return client.close(1000,"token is not reserved");
             if(players[msg].socket!==null)
                 return client.close(1000,"token is currently in use");
+            if(livePlayerCount<1) newMazeStartDate=Date.now();
             clearTimeout(afk); //first message sent, not afk
             lastPing=Number(new Date());
             players[msg].pos=players[msg].pos||Array.from(game.start); //set player starting pos
@@ -139,6 +142,7 @@ ws.on('connection',client=>{
             clearInterval(players[msg].interval); //remove old ping interval (for reconnections)
             players[msg].interval=ping; //setting new ping interval
             client.send('='+game.dataURL) //the maze itself
+            livePlayerCount++; //new live player
             return token=msg; //save the token
         }
         if(msg==="PING"){ //on ping
@@ -168,7 +172,6 @@ ws.on('connection',client=>{
             makeMove(game,msg,players[token].pos);
             if(game.end[0]===players[token].pos[0] && game.end[1]===players[token].pos[1]){
                 if(!newMazeWinners){
-                    let timeLeft=(newMazeStartDate+9e4)-Date.now();
                     setTimeout(newMaze,5e3);
                     newMazeWinners=[]
                 }
