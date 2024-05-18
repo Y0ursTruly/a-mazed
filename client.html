@@ -1,6 +1,7 @@
 <html>
 <head>
     <title>Multiplayer Maze</title>
+    <link rel="icon" href="https://i.sstatic.net/P6Ljn.png" type="image/x-icon">
     <meta property="og:title" content="Multiplayer Maze">
     <!-- <meta property="og:image" content="https://i.stack.imgur.com/EK4vR.png"> -->
     <meta property="og:image" content="https://i.stack.imgur.com/P6Ljn.png">
@@ -72,7 +73,7 @@ let colour=null, nameChanges=0, savedToken="\\";
     if(arguments.callee.caller) console.warn("reconnection");
     else console.log("first connection");
     (colour=null, nameChanges=0, namespace.contentEditable=true); //resets due to new connection
-    let socket = new WebSocket("wss://"+location.host)
+    let socket = new WebSocket(`ws${location.protocol[4]==='s'?'s':''}://`+location.host)
     let lastPing=Number(new Date()), t=null
     let reconnect=_=>{
         socket.removeEventListener('close',reconnect)
