@@ -17,6 +17,6 @@
   "dependencies": {
     "@y0urstruly/maze": "^1.0.1",
     "canvas": "^2.11.2",
-    "ws": "^8.13.0"
+    "ws": "^8.17.1"
   }
 }
