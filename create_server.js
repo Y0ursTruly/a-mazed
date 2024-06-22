@@ -5,10 +5,13 @@
 //alternatively, these attributes can be passed in as an object as the second argument to the exported module with the same attributes mentioned
 //and if the values are NOT strings (like buffers), they would be treated as the key and cert DIRECTLY
 
-//also ensure that "port" is set in either the environment 
+//also ensure that "port" is set in either the environment
 const https=require('node:https'), http=require('node:http'), fs=require('node:fs')
 module.exports=function create_server(responder,options){
-  const {tls_key,tls_cert}=options||process.env, ownsCert=tls_key&&tls_cert
+  let {tls_key,tls_cert}=options
+  tls_key ||= process.env.tls_key || process.env.TLS_KEY
+  tls_cert ||= process.env.tls_cert || process.env.TLS_CERT
+  const ownsCert=tls_key&&tls_cert
   const key=typeof tls_key==="string"? fs.readFileSync(tls_key): tls_key
   const cert=typeof tls_cert==="string"? fs.readFileSync(tls_cert): tls_cert
   const envPort=process.env.port||process.env.PORT
