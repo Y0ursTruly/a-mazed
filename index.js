@@ -1,12 +1,9 @@
 const {makeMaze, makeRandomMaze, makeMove} = require('@y0urstruly/maze');
-const http=require('node:http'), https=require('node:https');
+const create_server=require('./create_server.js');
 const fs=require('node:fs'), crypto=require('node:crypto');
 const WebSocket=require('ws'), slash=process.platform=="win32"?"\\":"/";
 const random=_=> crypto.webcrypto.getRandomValues(new Uint32Array(1))[0];
 const range=(min,max)=>(random()%((max+1)-min))+min;
-const {tls_key,tls_cert,PORT}=process.env, ownsCert=tls_key && tls_cert;
-//tls_key is file location of private key, tls_cert is file location of certificate
-//so set these env vars once you OWN a tls certificate
 
 let ab_map=[], str_map={__proto__:null}, NULL=Symbol(null)
 for(let i=0;i<256;i++){
@@ -107,14 +104,10 @@ function newPos(x,y,colour,{l,f,s},isPlyr){
     return short(X)+short(Y)+short(S)+colour+(isPlyr?short(S+f)+'\n':'\n');
 }
 
-function responder(req,res){
+const server=create_server(function(req,res){
     res.setHeader('Content-Type','text/html');
     res.end(html.join(createToken()))
-}
-const server=ownsCert?
-  https.createServer({key:fs.readFileSync(tls_key),cert:fs.readFileSync(tls_cert)}, responder):
-  http.createServer(responder)
-server.listen(PORT||(ownsCert?443:80), _=>console.log('hosting...'))
+})
 
 const ws = new WebSocket.Server({server,maxPayload:2**11})
 ws.on('connection',client=>{
