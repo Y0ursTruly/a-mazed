@@ -128,7 +128,7 @@ ws.on('connection',client=>{
         else return 0; //as for now, ignore... will be a feature later
         if(token===NULL){ //on first msg
             if(msg.length!==15)
-                return client.close("invalid authentication"); //because every token is of length 15
+                return client.close(1000,"invalid authentication"); //because every token is of length 15
             if(!players[msg])
                 return client.close(1000,"token is not reserved");
             if(players[msg].socket!==null)
