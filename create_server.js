@@ -7,6 +7,9 @@
 
 //also ensure that "port" is set in either the environment
 const https=require('node:https'), http=require('node:http'), fs=require('node:fs')
+function equivalent(buf1,buf2){
+  return buf1.toString('binary') === buf2.toString('binary')
+}
 module.exports=function create_server(responder,options={}){
   let {tls_key,tls_cert}=options
   tls_key ||= process.env.tls_key || process.env.TLS_KEY
@@ -39,7 +42,7 @@ module.exports=function create_server(responder,options={}){
       //the key_renewer and cert_renewer if given can be asynchronous
       const key_next = await key_renewer()
       const cert_next = await cert_renewer()
-      if(key_next===key && cert_next===cert) return null; //no changes to be made
+      if(equivalent(key_next,key) && equivalent(cert_next,cert)) return null; //no changes to be made
       key = key_next
       cert = cert_next
       server.setSecureContext({key,cert})
